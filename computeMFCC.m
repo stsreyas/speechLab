@@ -14,27 +14,13 @@ function mfccMat = computeMFCC(x, fs, varargin)
 
 nargin
 
-if nargin < 7
-	numBins = 24
-end
-if nargin < 6
-	numMFCC = 13
-end
-if nargin < 5
-	applyHamming = 1
-end
-if nargin < 4
- 	stepTime = 0.010
-end
-if nargin < 3
-	winTime = 0.025
-end
-if nargin < 2
-	fs = 16000
-end
-if nargin < 1
-	error('input signal not present');
-end
+if nargin < 7, numBins = 24; end
+if nargin < 6, numMFCC = 13; end
+if nargin < 5, applyHamming = 1; end
+if nargin < 4, stepTime = 0.010; end
+if nargin < 3, winTime = 0.025; end
+if nargin < 2, fs = 16000; end
+if nargin < 1, error('input signal not present'); end
 
 windowSamples = winTime * fs;
 stepSamples = stepTime * fs;

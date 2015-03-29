@@ -7,7 +7,6 @@
 function [mfccVec] = mfcc(frame, fBank, numMFCC)
 
 	[numBins, ~] = size(fBank);
-	mfccVec = [];
 	frameSamples = length(frame);
 	fftSize = 2^nextpow2(frameSamples);
 	x = fft(frame, fftSize);
