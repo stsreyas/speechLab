@@ -5,9 +5,9 @@ saveFiles = 1;
 
 % noisyMFCC = load('./data/440c0201_noisy.mat');
 % cleanMFCC = load('./data/440c0201_clean.mat');
-% [noisyAud, ~] = audioread('./data/440c0201.wav');
 % [cleanAud, ~] = audioread('./data/440c0201_clean.wav');
 [cleanAud, ~] = audioread('./data/440_16k/01/440c0201_clean.wav');
+[noisyAud, ~] = audioread('./data/440_16k/01/440c0201_noisy_airport.wav');
 
 
 estMFCC = load('./data/440_16k/01/440c0201_it05_airport.mat');
@@ -19,7 +19,7 @@ absOptions = { 'wintime', 0.020, 'hoptime', 0.010, 'sumpower', 1*0, 'preemph',  
     'dither', 0, 'minfreq' ,50, 'maxfreq', 7000, 'bwidth', 1.0, 'modelorder', 0, 'nbands', 26,...
     'usecmp', 0, 'fbtype', 'htkmel', 'dcttype', 1, 'lifterexp', -22};
 
-exc = 'pitchpulsetrain';
+exc = 'suvpitchmix';
 if strcmp(exc, 'residual'), excFlag = 1; end
 
 fs = estMFCC.fs;
@@ -43,10 +43,9 @@ moreOptions = {'amp', 10, 'fs', fs, 'nfft', 512, 'winpts', winpts,...
 absOptions = horzcat(absOptions, moreOptions);
 ex = generateExcitation(numSamples, exc, steppts, absOptions{:});
 
-figure(1)
-plot(ex)
-waitforbuttonpress();
-
+% figure(1)
+% plot(ex)
+% waitforbuttonpress();
 
 % excit = [];
 excit = ex;
@@ -57,6 +56,8 @@ absOptions = horzcat(absOptions, {'excitation', excit});
 
 [cleanAudPSpec, ~] = powspec(cleanAud, fs, wintime, steptime, 0);
 [cleanAudMfcc, ~, ~] = melfcc(cleanAud, fs, absOptions{:});
+[noisyAudPSpec, ~] = powspec(noisyAud, fs, wintime, steptime, 0);
+[noisyAudMfcc, ~, ~] = melfcc(noisyAud, fs, absOptions{:});
 
 estCep13 = estMFCC.cep3(1:13, 1:numFrames);
 
@@ -75,13 +76,17 @@ for i = 1:13
 end
 
 [estResyn, estResynAspec, estResynPspec] = invmelfcc(estCep13, fs, 1, 0, absOptions{:});
+[noisyResyn, noisyResynAspec, noisyResynPspec] = invmelfcc(noisyAudMfcc(:, 1:numFrames), fs, 1, 0, absOptions{:});
 
 % sound(estResyn);
 
 if saveFiles == 1
-    set = '440d0201_it05_pc';
+    set = '440c0201_it05_pc';
     fname = strcat(set, '_', exc, '.wav');
     audiowrite(fname, estResyn, fs);
+    set = '440c0201_noisy_airport_pc';
+    fname = strcat(set, '_', exc, '.wav');
+    audiowrite(fname, noisyResyn, fs);
 end
 
 status = 3
