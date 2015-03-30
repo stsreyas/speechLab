@@ -1,10 +1,10 @@
 function [excitation, mfccPSpec] = generateExcitation(numSamples, type, step, varargin)
 
 [sumpower, minfreq, maxfreq, nbands, bwidth, dcttype, fbtype, ...
-    inPSpec, inMfccVec, amplitude, fs, nfft, pitch] = ...
+    inPSpec, inMfccVec, amplitude, fs, nfft, pitch, hoptime] = ...
     process_options(varargin, 'sumpower', 0, 'minfreq', 50, 'maxfreq', 7000, ...
     'nbands', 26, 'bwidth', 1.0, 'dcttype', 1, 'fbtype', 'mel',...
-    'inPSpec', [], 'inMfccVec', [], 'amp', 1, 'fs', 16000, 'nfft', 512, 'pitch', []);
+    'inPSpec', [], 'inMfccVec', [], 'amp', 1, 'fs', 16000, 'nfft', 512, 'pitch', [], 'hoptime', 0.01);
 
 excitation = [];
 mfccPSpec = [];
@@ -55,9 +55,14 @@ elseif strcmp(type, 'residual')
     excitation = excitationSpec;
     
 elseif strcmp(type, 'pitchpulsetrain')
-    
-    excitation = pulseTrainF0(pitch, fs, (2 * pi));
-    
+    excitation = pulseTrainF0(pitch, fs, hoptime, (2 * pi));
+
+elseif strcmp(type, 'pitchnoisemix')
+    pulseEx = pulseTrainF0(pitch, fs, hoptime, (2 * pi));
+    [ns, ~] = size(pulseEx);
+    noise = randn(ns,1);
+    excitation = pulseEx;
+    excitation(find(excitation == 0)) = noise;
 end
 
 end
