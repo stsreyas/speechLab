@@ -1,13 +1,15 @@
 function [excitation, mfccPSpec] = generateExcitation(numSamples, type, step, varargin)
 
 [sumpower, minfreq, maxfreq, nbands, bwidth, dcttype, fbtype, ...
-    inPSpec, inMfccVec, amplitude, fs, nfft, pitch, hoptime] = ...
+    inPSpec, inMfccVec, amplitude, fs, nfft, pitch, hoptime, winpts, steppts] = ...
     process_options(varargin, 'sumpower', 0, 'minfreq', 50, 'maxfreq', 7000, ...
     'nbands', 26, 'bwidth', 1.0, 'dcttype', 1, 'fbtype', 'mel',...
-    'inPSpec', [], 'inMfccVec', [], 'amp', 1, 'fs', 16000, 'nfft', 512, 'pitch', [], 'hoptime', 0.01);
+    'inPSpec', [], 'inMfccVec', [], 'amp', 1, 'fs', 16000, 'nfft', 512,...
+    'pitch', [], 'hoptime', 0.01, 'winpts', 400, 'steppts', 160);
 
 excitation = [];
 mfccPSpec = [];
+probThresh = 0.75;
 % if nargin < 10
 % if nargin < 9, dcttype = 1;
 % if nargin < 8, nOverlap = 160; end
@@ -37,7 +39,7 @@ elseif strcmp(type, 'residual')
     mfccSpec = cep2spec(inMfccVec, nbands, dcttype);
     mfccPSpec = invaudspec(mfccSpec, fs, nfft, fbtype, minfreq, maxfreq, sumpower, bwidth);
     excitationSpec = abs(inPSpec) ./ sqrt(mfccPSpec);
-    excitationSpec(find(excitationSpec == Inf)) = inPSpec(find(excitationSpec == Inf));
+    excitationSpec(excitationSpec == Inf) = inPSpec(excitationSpec == Inf);
     
 %     figure1 = figure;
 %     axes1 = axes('Parent', figure1);
@@ -62,7 +64,35 @@ elseif strcmp(type, 'pitchnoisemix')
     [ns, ~] = size(pulseEx);
     noise = randn(ns,1);
     excitation = pulseEx;
-    excitation(find(excitation == 0)) = noise;
+    excitation(pulseEx == 0) = noise;
+    
+elseif strcmp(type, 'suv')
+    
+    suvPVec = vertcat(0, pitch(:,4));
+    suvVec = suvPVec > probThresh;
+    suvMat = repmat(suvVec', [(winpts-steppts), 1]);
+    [r, c] = size(suvMat);
+    suvSamples = reshape(suvMat, [1, r*c]);
+    pulseEx = zeros([numSamples, 1]);
+    pulseEx(1:step:numSamples) = amplitude;
+    noiseEx = randn(numSamples,1);
+    excitation = zeros(size(suvSamples));
+    excitation(suvSamples == 0) = noiseEx(suvSamples == 0);
+    excitation(suvSamples == 1) = pulseEx(suvSamples == 1);
+    
+elseif strcmp(type, 'suvpitchmix')
+    
+    suvPVec = vertcat(0, pitch(:,4));
+    suvVec = suvPVec > probThresh;
+    suvMat = repmat(suvVec', [(winpts-steppts), 1]);
+    [r, c] = size(suvMat);
+    suvSamples = reshape(suvMat, [1, r*c]);
+    pulseEx = pulseTrainF0(pitch, fs, hoptime, (2 * pi));
+    noiseEx = randn(numSamples,1);
+    excitation = zeros(size(suvSamples));
+    excitation(suvSamples == 0) = noiseEx(suvSamples == 0);
+    excitation(suvSamples == 1) = pulseEx(suvSamples == 1);
+
 end
 
 end

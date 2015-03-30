@@ -19,7 +19,7 @@ absOptions = { 'wintime', 0.020, 'hoptime', 0.010, 'sumpower', 1*0, 'preemph',  
     'dither', 0, 'minfreq' ,50, 'maxfreq', 7000, 'bwidth', 1.0, 'modelorder', 0, 'nbands', 26,...
     'usecmp', 0, 'fbtype', 'htkmel', 'dcttype', 1, 'lifterexp', -22};
 
-exc = 'pitchnoisemix';
+exc = 'pitchpulsetrain';
 if strcmp(exc, 'residual'), excFlag = 1; end
 
 fs = estMFCC.fs;
@@ -38,10 +38,16 @@ numSamples = winpts + steppts*(numFrames- 1);
 % invert power spec to get two excitation models (ground truth &
 % estimated)
 
-moreOptions = {'amp', 500, 'fs', fs, 'nfft', 512, 'winpts', winpts,...
+moreOptions = {'amp', 10, 'fs', fs, 'nfft', 512, 'winpts', winpts,...
     'steppts', steppts, 'pitch', pitchMat};
 absOptions = horzcat(absOptions, moreOptions);
 ex = generateExcitation(numSamples, exc, steppts, absOptions{:});
+
+figure(1)
+plot(ex)
+waitforbuttonpress();
+
+
 % excit = [];
 excit = ex;
 
@@ -69,6 +75,8 @@ for i = 1:13
 end
 
 [estResyn, estResynAspec, estResynPspec] = invmelfcc(estCep13, fs, 1, 0, absOptions{:});
+
+% sound(estResyn);
 
 if saveFiles == 1
     set = '440d0201_it05_pc';
