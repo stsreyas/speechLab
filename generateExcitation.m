@@ -9,7 +9,7 @@ function [excitation, mfccPSpec] = generateExcitation(numSamples, type, step, va
 
 excitation = [];
 mfccPSpec = [];
-probThresh = 0.75;
+probThresh = 0.6;
 % if nargin < 10
 % if nargin < 9, dcttype = 1;
 % if nargin < 8, nOverlap = 160; end
@@ -35,22 +35,38 @@ elseif strcmp(type, 'whitenoise')
 elseif strcmp(type, 'residual')
     if (size(inPSpec(:,1)) <= 1), error('input signal power spectrum not present'); end
     if (size(inMfccVec(:,1)) <= 1), error('mfcc power spectrum not present'); end
+    % lifter is applicable here since cep3 is the liftered mfcc values
     inMfccVec = lifter(inMfccVec, -22, 1);
     mfccSpec = cep2spec(inMfccVec, nbands, dcttype);
     mfccPSpec = invaudspec(mfccSpec, fs, nfft, fbtype, minfreq, maxfreq, sumpower, bwidth);
-    excitationSpec = abs(inPSpec) ./ sqrt(mfccPSpec);
-    excitationSpec(excitationSpec == Inf) = inPSpec(excitationSpec == Inf);
+%     excitationSpec = sqrt(inPSpec) ./ sqrt(mfccPSpec);
+    excitationSpec = (inPSpec) ./ sqrt(mfccPSpec);
+%     excitationSpec(excitationSpec == Inf) = inPSpec(excitationSpec == Inf);
+    absExcitationSpec = abs(excitationSpec);
+    excitationSpec(absExcitationSpec == Inf) = 0;
+    excitationSpec(225:end, :) = 0;
+    excitationSpec(1:2, :) = 0;
     
+%     tempSpec = excitationSpec .* sqrt(mfccPSpec);
+%     [tempSig] = invspecgram(tempSpec, nfft, fs, winpts, (winpts - steppts));
+%     
+%     saveFiles = 1;
+%     if saveFiles == 1
+%         set = '440c0201_tempResyn';
+%         fname = strcat(set, '_', type, '.wav');
+%         audiowrite(fname, tempSig, fs);
+%     end
+% 
 %     figure1 = figure;
 %     axes1 = axes('Parent', figure1);
 %     hold(axes1, 'all');
-%     subplot(3,1, 1)
-%     imagesc(10*log10(inPSpec)); axis xy; colorbar    
+%     subplot(3,1,1)
+%     imagesc(10*log10(abs(inPSpec).^2)); axis xy; colorbar    
 %     subplot(3,1,2)
 %     imagesc(10*log10(mfccPSpec)); axis xy; colorbar    
 %     subplot(3,1,3)
-%     imagesc(10*log10(excitationSpec)); axis xy; colorbar    
-%     close(figure1);
+%     imagesc(10*log10(abs(tempSpec).^2)); axis xy; colorbar    
+%     waitforbuttonpress();
     
 %     nOverlap = winpts - steppts;
 %     excitation = ispecgram(excitationSpec, nfft, fs, winpts, nOverlap);
@@ -87,12 +103,36 @@ elseif strcmp(type, 'suvpitchmix')
     suvMat = repmat(suvVec', [(winpts-steppts), 1]);
     [r, c] = size(suvMat);
     suvSamples = reshape(suvMat, [1, r*c]);
-    pulseEx = pulseTrainF0(pitch, fs, hoptime, (2 * pi));
+
+    [pulseEx, ~] = pulseTrainF0(pitch, fs, hoptime, (2 * pi), 'zc' );
     noiseEx = randn(numSamples,1);
     excitation = zeros(size(suvSamples));
     excitation(suvSamples == 0) = noiseEx(suvSamples == 0);
     excitation(suvSamples == 1) = pulseEx(suvSamples == 1);
 
+elseif strcmp(type, 'suvpitchmix2')
+    
+    scaleNoise = 1;
+    scalePitch = 10;
+    [pulseEx, modPitchVec] = pulseTrainF0(pitch, fs, hoptime, (2 * pi), 'zc');
+    noiseEx = rand(numSamples,1);
+
+    pitch(:,3) = modPitchVec;
+    suvPVec = vertcat(0, pitch(:,3));
+    suvVec = suvPVec == 0;
+    suvMat = repmat(suvVec', [(winpts-steppts), 1]);
+    [r, c] = size(suvMat);
+    suvSamples = reshape(suvMat, [1, r*c]);
+    suvSamples = abs(suvSamples - 1);
+%     figure(1)
+%     plot(suvSamples, 'b*');
+%     waitforbuttonpress();
+
+    % temporary cross fade 
+    excitation = zeros(size(suvSamples));
+    excitation(suvSamples == 0) = scaleNoise * noiseEx(suvSamples == 0);% - scaleNoise/2;
+    excitation(suvSamples == 1) = scalePitch * pulseEx(suvSamples == 1);% - scalePitch/2;
+    
 end
 
 end
