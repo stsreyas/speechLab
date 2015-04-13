@@ -45,6 +45,17 @@ moreOptions = {'amp', 10, 'fs', fs, 'nfft', nfft, 'winpts', winpts,...
 absOptions = horzcat(absOptions, moreOptions);
 ex = generateExcitation(numSamples, exc, steppts, absOptions{:});
 
+hpFilt = designfilt('highpassiir','FilterOrder', 4, ...
+         'PassbandFrequency' , 200, 'PassbandRipple', .5, ...
+         'SampleRate', fs);
+     
+% lpFilt = designfilt('lowpassiir','FilterOrder',8, ...
+%          'PassbandFrequency', 100,'PassbandRipple', 5, ...
+%          'SampleRate', fs);     
+
+% ex = filter(hpFilt, ex);
+% ex = filter(lpFilt, ex);
+
 hanningWindow = hanning(winpts)';
 [exPSpec, ~] = specgram(ex, nfft, fs, hanningWindow, nOverlap);
 
@@ -89,14 +100,12 @@ end
 
 if saveFiles == 1
     set = '440c0201_it05_pn_zc';
-    fname = strcat(set, '_', exc, '.wav');
+    fname = strcat(set, '_4_0hpf200_', exc, '.wav');
     audiowrite(fname, estResyn, fs);
     set = '440c0201_noisy_airport_zc';
-    fname = strcat(set, '_', exc, '.wav');
+    fname = strcat(set, '_4_0hpf200_', exc, '.wav');
     audiowrite(fname, noisyResyn, fs);
 end
-
-status = 3
 
 figure(4)
 subplot(2,1,1)

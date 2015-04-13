@@ -8,12 +8,17 @@ clip = range - 1;
 pitchVec1 = vertcat(0, pitchMat(:,3), 0);
 % try to interpolate when a single frame is out of place
 
-pitchVec = removeJitter(pitchVec1);
-pitchMat = pitchVec(2:end-1);
+pitchVec2 = removeJitter(pitchVec1);
+pitchMat = pitchVec2(2:end-1);
+
+pitchVec = spreadVec(pitchVec2, 4);
+
 figure(1)
-subplot(2,1,1)
+subplot(3,1,1)
 plot(pitchVec1)
-subplot(2,1,2)
+subplot(3,1,2)
+plot(pitchVec2)
+subplot(3,1,3)
 plot(pitchVec)
 waitforbuttonpress();
 
@@ -78,6 +83,31 @@ for i = startIdx:endIdx
        nextFrPitch = input(i+2);
        if((prevFrPitch > 0) && (nextFrPitch > 0))
             output(i) = (prevFrPitch + nextFrPitch) / 2;
+       end
+   else
+       output(i) = input(i);
+   end
+end
+end
+
+function output = spreadVec(input, shift)
+
+output = zeros(size(input));
+[r, ~] = size(input);
+
+startIdx = shift + 1;
+endIdx = r - shift;
+
+for i = startIdx:endIdx
+   if(input(i) ~= 0)
+       prevFrPitch = input(i - shift);
+       nextFrPitch = input(i + shift);
+       if(prevFrPitch == 0)
+            output((i - shift):i) = input(i);
+       elseif(nextFrPitch== 0)
+            output(i:(i + shift)) = input(i);
+       else
+           output(i) = input(i);
        end
    else
        output(i) = input(i);
