@@ -112,14 +112,10 @@ elseif strcmp(type, 'suvpitchmix')
 
 elseif strcmp(type, 'suvpitchmix2')
     
-    scaleNoise = 1;
-    scalePitch = 10;
+    scaleNoise = 4;
+    scalePitch = 6;
     [pulseEx, modPitchVec] = pulseTrainF0(pitch, fs, hoptime, (2 * pi), 'zc');
     
-%     [mask] = generateCrossfadeMask(pitch(:,3), 3, 'decay');
-    
-    noiseEx = rand(numSamples,1);
-
     pitch(:,3) = modPitchVec;
     suvPVec = vertcat(0, pitch(:,3));
     suvVec = suvPVec == 0;
@@ -128,22 +124,101 @@ elseif strcmp(type, 'suvpitchmix2')
     suvSamples = reshape(suvMat, [1, r*c]);
     suvSamples = abs(suvSamples - 1);
 
+    [pmask, nmask] = generateCrossfadeMasks(suvSamples, 640, 'decay');
+    
+    noiseEx = rand(numSamples,1);
+
     % temporary cross fade 
-    excitation = zeros(size(suvSamples));
-    voicedVec = (suvSamples == 1);
-    excitation(voicedVec) = scalePitch * pulseEx(suvSamples == 1);% - scalePitch/2;
-%     excitation((suvSamples == 1) + 20) = scalePitch/4 * pulseEx(suvSamples == 1);% - scalePitch/2;
-%     excitation((suvSamples == 1) - 20) = scalePitch/4 * pulseEx(suvSamples == 1);% - scalePitch/2;
-    excitation(suvSamples == 0) = scaleNoise * excitation(suvSamples == 0)/(scalePitch/2) + scaleNoise * noiseEx(suvSamples == 0)';% - scaleNoise/2;
+%     excitation = zeros(size(suvSamples));
+    pulseExFade = scalePitch * (pmask.* pulseEx);
+    noiseExFade = scaleNoise * (nmask .* noiseEx');
+    
+%     figure(786)
+%     subplot(3,1,1)
+%     plot(pulseEx)
+%     subplot(3,1,2)
+%     plot(pulseExFade)
+%     subplot(3,1,3)
+%     plot(pmask, 'b*-')
+%     waitforbuttonpress();
+% 
+%     figure(787)
+%     subplot(3,1,1)
+%     plot(noiseEx)
+%     subplot(3,1,2)
+%     plot(noiseExFade)
+%     subplot(3,1,3)
+%     plot(nmask, 'b*-')
+%     waitforbuttonpress();
+    
+    excitation = pulseExFade + noiseExFade;
+%     voicedVec = (suvSamples == 1);
+%     excitation(voicedVec) = scalePitch * pulseEx(suvSamples == 1);% - scalePitch/2;
+%     excitation(suvSamples == 0) = scaleNoise * excitation(suvSamples == 0)/(scalePitch/2) + scaleNoise * noiseEx(suvSamples == 0)';% - scaleNoise/2;
     
 end
 
 end
 
-% function [mask] = generateCrossfadeMask(pitch, numFrames, fadeType)
-% 
-% pitchVec = vertcat(0, pitch, 0);
-% 
-% 
-% 
-% end
+function [pitchMask, noiseMask] = generateCrossfadeMasks(suvVec, fadeWidth, fadeType)
+
+pitchMask = zeros(size(suvVec));
+% noiseMask = zeros(size(suvVec));
+
+[~, numSamples] = size(suvVec);
+
+step = 1 / fadeWidth;
+
+if strcmp(fadeType, 'decay')
+    fadeIn = 0:step:(1-step);
+    fadeOut = (1-step):-step:0;
+elseif strcmp(fadeType, 'step')
+    fadeIn = 0.5 * ones([1, fadeWidth]);
+    fadeOut = 0.5 * ones([1, fadeWidth]);
+end
+
+vStrVec = strfind(suvVec, [0,1]);
+vEndVec = strfind(suvVec, [1,0]);
+
+[~, nstarts] = size(vStrVec);
+[~, nends] = size(vStrVec);
+
+numV = min(nstarts, nends);
+sCtr = 1;
+eCtr = 1;
+
+for i = 1:numV-1
+    
+    vStart = vStrVec(sCtr);
+    vEnd = vEndVec(eCtr);
+    
+    if vEnd <= vStart
+        sCtr = sCtr + 1;
+        eCtr = eCtr + 1;
+    else
+        pitchMask((vStart + 1):vEnd) = 1;
+        if(vStart > fadeWidth)
+            pitchMask((vStart - fadeWidth + 1):vStart) = fadeIn;
+        end
+        if((vEnd + fadeWidth) <= numSamples)
+            pitchMask((vEnd + 1):(vEnd + fadeWidth)) = fadeOut;
+        end
+        
+        sCtr = sCtr + 1;
+        eCtr = eCtr + 1;
+    end
+end
+
+noiseMask = 1 - pitchMask;
+
+% figure(99)
+% subplot(3,1,1)
+% plot(suvVec, 'b-*');
+% subplot(3,1,2)
+% plot(pitchMask, 'b*-');
+% subplot(3,1,3)
+% plot(noiseMask, 'b*-');
+% waitforbuttonpress();
+
+
+end

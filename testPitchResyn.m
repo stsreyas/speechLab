@@ -16,7 +16,7 @@ pitchMat = textread('./data/440_16k/01/pitch/440c0201_noisy_airport.SAcC.pitch')
 
 % Parameters being used in anBySyn
 absOptions = { 'wintime', 0.020, 'hoptime', 0.010, 'sumpower', 1*0, 'preemph',  0.97*0,...
-    'dither', 0, 'minfreq' ,50, 'maxfreq', 7000, 'bwidth', 1.0, 'modelorder', 0, 'nbands', 26,...
+    'dither', 0, 'minfreq', 50, 'maxfreq', 7000, 'bwidth', 1.0, 'modelorder', 0, 'nbands', 26,...
     'usecmp', 0, 'fbtype', 'htkmel', 'dcttype', 1, 'lifterexp', -22};
 
 exc = 'suvpitchmix2';
@@ -46,14 +46,14 @@ absOptions = horzcat(absOptions, moreOptions);
 ex = generateExcitation(numSamples, exc, steppts, absOptions{:});
 
 hpFilt = designfilt('highpassiir','FilterOrder', 4, ...
-         'PassbandFrequency' , 200, 'PassbandRipple', .5, ...
+         'PassbandFrequency' , 400, 'PassbandRipple', .5, ...
          'SampleRate', fs);
      
 % lpFilt = designfilt('lowpassiir','FilterOrder',8, ...
 %          'PassbandFrequency', 100,'PassbandRipple', 5, ...
 %          'SampleRate', fs);     
 
-% ex = filter(hpFilt, ex);
+ex = filter(hpFilt, ex);
 % ex = filter(lpFilt, ex);
 
 hanningWindow = hanning(winpts)';
@@ -100,10 +100,10 @@ end
 
 if saveFiles == 1
     set = '440c0201_it05_pn_zc';
-    fname = strcat(set, '_4_0hpf200_', exc, '.wav');
+    fname = strcat(set, '_4decay_1hpf400_', exc, '.wav');
     audiowrite(fname, estResyn, fs);
     set = '440c0201_noisy_airport_zc';
-    fname = strcat(set, '_4_0hpf200_', exc, '.wav');
+    fname = strcat(set, '_4decay_1hpf400_', exc, '.wav');
     audiowrite(fname, noisyResyn, fs);
 end
 
@@ -113,11 +113,11 @@ plot(cleanAud);
 subplot(2,1,2)
 plot(estResyn);
 
-figure(5)
-subplot(2,1,1)
-plot(cleanAudMfcc(1, :));
-subplot(2,1,2)
-plot(estCep13(1, :));
+% figure(5)
+% subplot(2,1,1)
+% plot(cleanAudMfcc(1, :));
+% subplot(2,1,2)
+% plot(estCep13(1, :));
 
 figure(3)
 subplot(2, 1, 1)

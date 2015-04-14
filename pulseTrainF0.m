@@ -13,14 +13,14 @@ pitchMat = pitchVec2(2:end-1);
 
 pitchVec = spreadVec(pitchVec2, 4);
 
-figure(1)
-subplot(3,1,1)
-plot(pitchVec1)
-subplot(3,1,2)
-plot(pitchVec2)
-subplot(3,1,3)
-plot(pitchVec)
-waitforbuttonpress();
+% figure(1)
+% subplot(3,1,1)
+% plot(pitchVec1)
+% subplot(3,1,2)
+% plot(pitchVec2)
+% subplot(3,1,3)
+% plot(pitchVec)
+% waitforbuttonpress();
 
 f0 = pitchVec;
 [numFrames, ~] = size(f0);
@@ -99,18 +99,19 @@ startIdx = shift + 1;
 endIdx = r - shift;
 
 for i = startIdx:endIdx
-   if(input(i) ~= 0)
+    curFrPitch = input(i);
+   if(curFrPitch ~= 0)
        prevFrPitch = input(i - shift);
        nextFrPitch = input(i + shift);
        if(prevFrPitch == 0)
-            output((i - shift):i) = input(i);
-       elseif(nextFrPitch== 0)
-            output(i:(i + shift)) = input(i);
+            output((i - shift):i) = curFrPitch;
+       elseif(nextFrPitch == 0)
+            output(i:(i + shift)) = curFrPitch;
        else
            output(i) = input(i);
        end
-   else
-       output(i) = input(i);
+%    else
+%        output(i) = input(i);
    end
 end
 end
