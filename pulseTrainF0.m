@@ -1,4 +1,4 @@
-function [pulsetrain, pitchMat] = pulseTrainF0(pitchMat, fs, hoptime, deg, type)
+function [pulsetrain, pitchMat] = pulseTrainF0(pitchMat, fs, hoptime, deg, type, fadeFrames)
 
 range = 400;
 clip = range - 1;
@@ -11,7 +11,7 @@ pitchVec1 = vertcat(0, pitchMat(:,3), 0);
 pitchVec2 = removeJitter(pitchVec1);
 pitchMat = pitchVec2(2:end-1);
 
-pitchVec = spreadVec(pitchVec2, 4);
+pitchVec = spreadVec(pitchVec2, fadeFrames);
 
 % figure(1)
 % subplot(3,1,1)
