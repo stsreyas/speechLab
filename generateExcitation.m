@@ -116,6 +116,54 @@ elseif strcmp(type, 'suvpitchmix2')
     
     scaleNoise = 2;
     scalePitch = 4;
+    [pulseEx, modPitchVec, pitchSamples] = pulseTrainF0(pitch, fs, hoptime, (2 * pi), pulseType, fadeFrames);
+    
+    pitch(:,3) = modPitchVec;
+    suvPVec = vertcat(0, pitch(:,3));
+    suvVec = suvPVec == 0;
+    suvMat = repmat(suvVec', [(winpts-steppts), 1]);
+    [r, c] = size(suvMat);
+    suvSamples = reshape(suvMat, [1, r*c]);
+    suvSamples = abs(suvSamples - 1);
+
+    pmask = generateCrossfadeMasks(suvSamples, fadeSamples, fadeType);
+    nmask = 1 - pmask;
+    noiseEx = rand(numSamples,1) - 0.5;
+
+    % temporary cross fade 
+%     excitation = zeros(size(suvSamples));
+%     pulseExFade = scalePitch * (pmask.* pulseEx);
+%     noiseExFade = scaleNoise * (nmask .* noiseEx');
+    pulseExFade = pitchSamples(1:end-1) .* pmask.* pulseEx;
+    noiseExFade = nmask .* noiseEx';
+    
+%     figure(786)
+%     subplot(3,1,1)
+%     plot(pulseEx)
+%     subplot(3,1,2)
+%     plot(pulseExFade)
+%     subplot(3,1,3)
+%     plot(pmask, 'b*-')
+%     waitforbuttonpress();
+% 
+%     figure(787)
+%     subplot(3,1,1)
+%     plot(noiseEx)
+% %     subplot(3,1,2)
+% %     plot((1 - suvSamples), 'b*-')
+% %     subplot(3,1,3)
+% %     plot(umask, 'b*-')
+%     subplot(3,1,2)
+%     plot(noiseExFade)
+%     subplot(3,1,3)
+%     plot(nmask, 'b*-')
+%     waitforbuttonpress();
+    
+    excitation = pulseExFade + noiseExFade;
+elseif strcmp(type, 'suvpitchmix3')
+    
+    scaleNoise = 2;
+    scalePitch = 4;
     [pulseEx, modPitchVec] = pulseTrainF0(pitch, fs, hoptime, (2 * pi), pulseType, fadeFrames);
     
     pitch(:,3) = modPitchVec;
@@ -126,10 +174,11 @@ elseif strcmp(type, 'suvpitchmix2')
     suvSamples = reshape(suvMat, [1, r*c]);
     suvSamples = abs(suvSamples - 1);
 
-    [pmask, nmask] = generateCrossfadeMasks(suvSamples, fadeSamples, fadeType);
-    
+    pmask = generateCrossfadeMasks(suvSamples, fadeSamples, fadeType);
+    unvoicedMask = (1 - returnSilence(pitch, winpts, steppts));
+    umask = generateCrossfadeMasks(unvoicedMask, fadeSamples, fadeType);
+    nmask = (1 - suvSamples) .* umask;
     noiseEx = rand(numSamples,1) - 0.5;
-%     unvoicedMask = (1 - returnSilence(pitchMat, winpts, steppts));
 
     % temporary cross fade 
 %     excitation = zeros(size(suvSamples));
@@ -148,6 +197,10 @@ elseif strcmp(type, 'suvpitchmix2')
 %     figure(787)
 %     subplot(3,1,1)
 %     plot(noiseEx)
+% %     subplot(3,1,2)
+% %     plot((1 - suvSamples), 'b*-')
+% %     subplot(3,1,3)
+% %     plot(umask, 'b*-')
 %     subplot(3,1,2)
 %     plot(noiseExFade)
 %     subplot(3,1,3)
@@ -155,20 +208,15 @@ elseif strcmp(type, 'suvpitchmix2')
 %     waitforbuttonpress();
     
     excitation = pulseExFade + noiseExFade;
-%     voicedVec = (suvSamples == 1);
-%     excitation(voicedVec) = scalePitch * pulseEx(suvSamples == 1);% - scalePitch/2;
-%     excitation(suvSamples == 0) = scaleNoise * excitation(suvSamples == 0)/(scalePitch/2) + scaleNoise * noiseEx(suvSamples == 0)';% - scaleNoise/2;
-    
+end
 end
 
-end
+function [fadeMask] = generateCrossfadeMasks(binaryVec, fadeWidth, fadeType)
 
-function [pitchMask, noiseMask] = generateCrossfadeMasks(suvVec, fadeWidth, fadeType)
+binVec = horzcat(0, binaryVec, 0);
+mask = zeros(size(binVec));
 
-pitchMask = zeros(size(suvVec));
-% noiseMask = zeros(size(suvVec));
-
-[~, numSamples] = size(suvVec);
+[~, numSamples] = size(binVec);
 
 step = 1 / fadeWidth;
 
@@ -180,8 +228,8 @@ elseif strcmp(fadeType, 'step')
     fadeOut = 0.5 * ones([1, fadeWidth]);
 end
 
-vStrVec = strfind(suvVec, [0,1]);
-vEndVec = strfind(suvVec, [1,0]);
+vStrVec = strfind(binVec, [0,1]);
+vEndVec = strfind(binVec, [1,0]);
 
 [~, nstarts] = size(vStrVec);
 [~, nends] = size(vStrVec);
@@ -190,7 +238,7 @@ numV = min(nstarts, nends);
 sCtr = 1;
 eCtr = 1;
 
-for i = 1:numV-1
+for i = 1:numV
     
     vStart = vStrVec(sCtr);
     vEnd = vEndVec(eCtr);
@@ -199,42 +247,38 @@ for i = 1:numV-1
         sCtr = sCtr + 1;
         eCtr = eCtr + 1;
     else
-        pitchMask((vStart + 1):vEnd) = 1;
+        mask((vStart + 1):vEnd) = 1;
         if(vStart > fadeWidth)
-            pitchMask((vStart - fadeWidth + 1):vStart) = fadeIn;
+            mask((vStart - fadeWidth + 1):vStart) = fadeIn;
         end
         if((vEnd + fadeWidth) <= numSamples)
-            pitchMask((vEnd + 1):(vEnd + fadeWidth)) = fadeOut;
+            mask((vEnd + 1):(vEnd + fadeWidth)) = fadeOut;
         end
         
         sCtr = sCtr + 1;
         eCtr = eCtr + 1;
     end
 end
+fadeMask = mask(2:end-1);
 
-noiseMask = 1 - pitchMask;
-% noiseMask2 = (1 - silenceMask) .* noiseMask;
-
-% figure(99)
-% subplot(3,1,1)
-% plot(noiseMask, 'b-*');
-% subplot(3,1,2)
-% plot((1 - silenceMask), 'b*-');
-% subplot(3,1,3)
-% plot(noiseMask2, 'b*-');
+% figure(666)
+% subplot(2,1,1)
+% plot(binaryVec, 'b*-');
+% subplot(2,1,2)
+% plot(outMask, 'b*-');
 % waitforbuttonpress();
-
-
 end
 
 function silenceSamples = returnSilence(pitchMat, winpts, steppts)
 
+frameThresh = 20;
 vProb = pitchMat(:,4);
 pitchVec = pitchMat(:,3);
 voicedVec = (pitchVec == 0)';
-unvoicedVec = (vProb < 0.4)';
+unvoicedVec = (vProb < 0.2)';
 silenceVec = horzcat(0, unvoicedVec .* voicedVec, 0);
-
+% silenceVec = unvoicedVec .* voicedVec;
+[~, numSamples] = size(silenceVec);
 sStrVec = strfind(silenceVec, [0,1]);
 sEndVec = strfind(silenceVec, [1,0]);
 
@@ -252,7 +296,7 @@ for i = 1:numV
         sCtr = sCtr + 1;
         eCtr = eCtr + 1;
     else
-        if (sEnd - sStart) < 20
+        if (sEnd - sStart) < frameThresh
             silenceVec(sStart:sEnd) = 0;
         end
         sCtr = sCtr + 1;
@@ -279,10 +323,19 @@ for i = 1:numV
     else
         if i > 1
             prevSEnd = sEndVec(eCtr - 1);
-            if(sStart - prevSEnd) < 20
+            if(sStart - prevSEnd) < frameThresh
                 silenceVec(prevSEnd:sStart) = 1;
             end
+        else
+            if(sEnd < frameThresh)
+                silenceVec(1:sEnd) = 0;
+            end
         end
+        if sEnd >= numSamples - frameThresh
+            silenceVec(sStart:numSamples) = 1;
+        end
+        
+
         sCtr = sCtr + 1;
         eCtr = eCtr + 1;
     end
@@ -292,10 +345,10 @@ silenceMat = repmat(silenceVec(1:end-1), [(winpts-steppts), 1]);
 [r, c] = size(silenceMat);
 silenceSamples = reshape(silenceMat, [1, r*c]);
 
-figure(1)
-subplot(2,1,1)
-plot((1-silenceVec), 'b*-');
-subplot(2,1,2)
-plot(silenceVec, 'b*-');
-waitforbuttonpress();
+% figure(1)
+% subplot(2,1,1)
+% plot((1-silenceVec), 'b*-');
+% subplot(2,1,2)
+% plot(silenceVec, 'b*-');
+% waitforbuttonpress();
 end

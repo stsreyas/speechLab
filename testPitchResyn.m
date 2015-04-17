@@ -8,7 +8,8 @@ folderName = 'E:\SLATE\Repos\speechLab\trunk\pitchRes\';
 [cleanAud, ~] = audioread('./data/440_16k/01/440c0201_clean.wav');
 [noisyAud, ~] = audioread('./data/440_16k/01/440c0201_noisy_airport.wav');
 estMFCC = load('./data/440_16k/01/440c0201_it04_airport.mat');
-pitchMat = textread('./data/440_16k/01/pitch/440c0201_noisy_airport.SAcC.pitch');
+% pitchMat = textread('./data/440_16k/01/pitch/440c0201_noisy_airport.SAcC.pitch');
+pitchMat = textread('./data/440_16k/01/pitch/440c0201_clean.SAcC.pitch');
 [numFrames2, ~] = size(pitchMat);
 
 hpfFlagVec = [0,1];
@@ -23,7 +24,7 @@ absOptions = { 'wintime', 0.020, 'hoptime', 0.010, 'sumpower', 1*0, 'preemph',  
     'dither', 0, 'minfreq', 50, 'maxfreq', 7000, 'bwidth', 1.0, 'modelorder', 0, 'nbands', 26,...
     'usecmp', 0, 'fbtype', 'htkmel', 'dcttype', 1, 'lifterexp', -22};
 
-exc = 'suvpitchmix2';
+exc = 'suvpitchmix3';
 if strcmp(exc, 'residual'), excFlag = 1; end
 
 fs = estMFCC.fs;

@@ -1,4 +1,4 @@
-function [pulsetrain, pitchMat] = pulseTrainF0(pitchMat, fs, hoptime, deg, type, fadeFrames)
+function [pulsetrain, pitchMat, f0i] = pulseTrainF0(pitchMat, fs, hoptime, deg, type, fadeFrames)
 
 range = 400;
 clip = range - 1;
@@ -32,7 +32,6 @@ f0i = interp1(t, f0, ti);
 
 % gauss1D = [1, 4, 6, 4, 1]'/16;
 % f0iSmooth = imfilter(f0i, gauss1D, 'replicate');
-
 
 % Phasor spinning around at the appropriate rate
 phase = cumsum(f0i * deg / fs);  % Maybe 4 * pi...

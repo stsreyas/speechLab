@@ -9,7 +9,7 @@ saveFiles = 1;
 % Parameters being used in anBySyn
 absOptions = { 'wintime', 0.020, 'hoptime', 0.010, 'sumpower', 1*0, 'preemph',  0.97*0,...
     'dither', 0, 'minfreq' ,50, 'maxfreq', 7000, 'bwidth', 1.0, 'modelorder', 0, 'nbands', 26,...
-    'usecmp', 0, 'fbtype', 'htkmel', 'dcttype', 1, 'lifterexp', -22};
+    'usecmp', 0, 'fbtype', 'mel', 'dcttype', 1, 'lifterexp', -22};
 
 exc = 'residual';
 pitchMat = [];
@@ -42,7 +42,8 @@ excit = ex;
 absOptions = horzcat(absOptions, {'excitation', excit});
 
 estMFCC = load('E:\SLATE\Repos\speechLab\trunk\data\440_16k\01\440c0201_it04_airport.mat');
-estMFCC13 = estMFCC.cep3(1:13, :);
+% estMFCC13 = estMFCC.cep3(1:13, :);
+estMFCC13 = estMFCC.state;
 
 for i = 1:13
     
@@ -90,8 +91,8 @@ figure(5)
 subplot(4,1,1)
 imagesc(10*log10(abs(cleanAudPSpec).^2)); axis xy; colorbar
 subplot(4,1,2)
-imagesc(10*log10(cleanResynPSpec)); axis xy; colorbar
+imagesc(10*log10(abs(cleanResynPSpec).^2)); axis xy; colorbar
 subplot(4,1,3)
-imagesc(10*log10(estResynPSpec)); axis xy; colorbar
+imagesc(10*log10(abs(estResynPSpec).^2)); axis xy; colorbar
 subplot(4,1,4)
-imagesc(10*log10(noisyResynPSpec)); axis xy; colorbar
+imagesc(10*log10(abs(noisyResynPSpec).^2)); axis xy; colorbar
